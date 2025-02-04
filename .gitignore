@@ -37,3 +37,4 @@ extras
 test.php
 makeqs.php
 runqs.sh
+make.sh

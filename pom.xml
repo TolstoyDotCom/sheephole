@@ -262,7 +262,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>com.tolstoy.censorship.twitter.checker.app.Start</mainClass>
+							<mainClass>com.tolstoy.drupal.sheephole.app.FakeStart</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
@@ -288,7 +288,7 @@
 					</execution>
 				</executions>
 				<configuration>
-					<mainClass>com.tolstoy.drupal.sheephole.app.Start</mainClass>
+					<mainClass>com.tolstoy.drupal.sheephole.app.FakeStart</mainClass>
 					<systemProperties>
 						<systemProperty>
 							<key>io.netty.tryReflectionSetAccessible</key>
