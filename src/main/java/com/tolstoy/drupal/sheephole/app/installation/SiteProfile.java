@@ -262,6 +262,6 @@ public class SiteProfile implements ISiteProfile {
 
 	@Override
 	public String toString() {
-		return "{ title: " + getTitle() + ", userName: " + getUserName() + ", toBeDeleted: " + getToBeDeleted() + " }";
+		return "{ id: " + getId() + ", title: " + getTitle() + ", userName: " + getUserName() + ", toBeDeleted: " + getToBeDeleted() + " }";
 	}
 }

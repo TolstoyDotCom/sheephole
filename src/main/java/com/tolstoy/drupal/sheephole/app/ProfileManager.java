@@ -36,10 +36,11 @@ import org.semver4j.Semver;
 
 import com.tolstoy.basic.api.storage.IStorage;
 import com.tolstoy.basic.app.utils.Utils;
+import com.tolstoy.drupal.sheephole.api.IProfileManager;
 import com.tolstoy.drupal.sheephole.api.installation.ISiteProfile;
 import com.tolstoy.drupal.sheephole.app.installation.SiteProfile;
 
-public class ProfileManager {
+public class ProfileManager implements IProfileManager {
 	private static final Logger logger = LogManager.getLogger( ProfileManager.class );
 
 	private static final String TABLE_NAME = "site_profile";
@@ -51,6 +52,7 @@ public class ProfileManager {
 	public ProfileManager( IStorage storage, ISSHManager sshManager ) throws Exception {
 		this.storage = storage;
 		this.sshManager = sshManager;
+
 		createTableInternalIgnoreIfExists();
 	}
 
@@ -61,9 +63,9 @@ public class ProfileManager {
 
 		ISiteProfile profile = new SiteProfile( 0, title, userName, uri, directory, UID, ts, ts, info.getVersionString() );
 
-		saveProfiles( Arrays.asList( profile ) );
-
 		profile.setPassword( password );
+
+		saveProfiles( Arrays.asList( profile ) );
 
 		return profile;
 	}

@@ -18,4 +18,5 @@ import java.util.List;
 import org.semver4j.Semver;
 
 public interface IInstallableVersion {
+	boolean isCompatible( Semver other );
 }

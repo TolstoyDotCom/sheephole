@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.dizitart.jbus.JBus;
+import org.dizitart.jbus.Subscribe;
 import org.semver4j.Semver;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -38,6 +39,7 @@ import com.tolstoy.basic.api.utils.IResourceBundleWithFormatting;
 import com.tolstoy.basic.app.storage.StorageEmbeddedDerby;
 import com.tolstoy.basic.app.utils.Utils;
 import com.tolstoy.basic.app.utils.ResourceBundleWithFormatting;
+import com.tolstoy.drupal.sheephole.api.IProfileManager;
 import com.tolstoy.drupal.sheephole.api.installation.IAppDirectories;
 import com.tolstoy.drupal.sheephole.api.installation.ISiteProfile;
 import com.tolstoy.drupal.sheephole.api.installation.IInstallable;
@@ -48,10 +50,12 @@ import com.tolstoy.drupal.sheephole.api.installation.IJsonUtils;
 import com.tolstoy.drupal.sheephole.api.installation.IOperationResult;
 import com.tolstoy.drupal.sheephole.api.installation.OperationResultType;
 import com.tolstoy.drupal.sheephole.api.installation.PlatformType;
+import com.tolstoy.drupal.sheephole.api.installation.ProjectType;
 import com.tolstoy.drupal.sheephole.api.preferences.IPreferences;
 import com.tolstoy.drupal.sheephole.api.preferences.IPreferencesFactory;
 import com.tolstoy.drupal.sheephole.app.preferences.PreferencesFactory;
 import com.tolstoy.drupal.sheephole.app.installation.AppDirectories;
+import com.tolstoy.drupal.sheephole.app.installation.BasicInstallableVersion;
 import com.tolstoy.drupal.sheephole.app.installation.Installable;
 import com.tolstoy.drupal.sheephole.app.installation.InstallationInstruction;
 import com.tolstoy.drupal.sheephole.app.installation.JsonUtils;
@@ -63,20 +67,24 @@ public class BusinessLogic {
 	private static final String CACHED_MODULES_D10 = "drupal_modules_d10_jan25.json";
 	private static final String CACHED_MODULES_D11 = "drupal_modules_d11_jan25.json";
 
+	private final JBus jbus;
 	private final IStorage storage;
 	private final IPreferences prefs;
 	private final IAppDirectories appDirectories;
 	private final IResourceBundleWithFormatting bundle;
-	private final ProfileManager profileManager;
+	private final IProfileManager profileManager;
 	private final ISSHManager sshManager;
 	private final List<IInstallable> installables10;
 	private final List<IInstallable> installables11;
 
 	private static final String[] TABLE_NAMES = { "preferences" };
 
-	public BusinessLogic() throws Exception {
-		this.installables10 = parseCachedModules( CACHED_MODULES_D10 );
-		this.installables11 = parseCachedModules( CACHED_MODULES_D11 );
+	public BusinessLogic( JBus jbus ) throws Exception {
+		this.jbus = jbus;
+		this.jbus.registerWeak( this );
+
+		this.installables10 = parseCachedModules( CACHED_MODULES_D10, new Semver( "10.0.0" ) );
+		this.installables11 = parseCachedModules( CACHED_MODULES_D11, new Semver( "11.0.0" ) );
 
 		Properties props = null;
 		Map<String,String> defaultAppPrefs = null;
@@ -87,7 +95,7 @@ public class BusinessLogic {
 		IStorage tempStorage = null;
 		IPreferences tempPrefs = null;
 		IAppDirectories tempAppDirectories = null;
-		ProfileManager tempProfileManager = null;
+		IProfileManager tempProfileManager = null;
 		ISSHManager tempSSHManager = null;
 
 		try {
@@ -140,7 +148,7 @@ public class BusinessLogic {
 		try {
 			tempSSHManager = new SSHManager();
 
-			tempProfileManager = new ProfileManager( tempStorage, tempSSHManager );
+			tempProfileManager = new CachingProfileManager( new ProfileManager( tempStorage, tempSSHManager ) );
 		}
 		catch ( final Exception e ) {
 			handleError( true, this.bundle.getString( "exc_profilemgr_init" ), e );
@@ -246,6 +254,24 @@ public class BusinessLogic {
 		return installables11;
 	}
 
+	public List<IInstallable> getInstallables( PlatformType platformType, ProjectType projectType, String identifier ) {
+		List<IInstallable> ret = new ArrayList<IInstallable>();
+
+		for ( IInstallable installable : installables10 ) {
+			if ( installable.getMachineName().equals( identifier ) ) {
+				ret.add( installable );
+			}
+		}
+
+		for ( IInstallable installable : installables11 ) {
+			if ( installable.getMachineName().equals( identifier ) ) {
+				ret.add( installable );
+			}
+		}
+
+		return ret;
+	}
+
 	public IOperationResult installInstallable( IInstallable installable, ISiteProfile profile, String password ) {
 		try {
 			for ( IInstallationInstruction instruction : installable.getInstallationInstructions() ) {
@@ -262,14 +288,14 @@ public class BusinessLogic {
 		return new OperationResult( OperationResultType.SUCCESS );
 	}
 
-	protected List<IInstallable> parseCachedModules( String resourcePath ) throws Exception {
+	protected List<IInstallable> parseCachedModules( String resourcePath, Semver semver ) throws Exception {
 		List<IInstallable> ret = new ArrayList<IInstallable>( 10000 );
 
 		IJsonUtils jsonUtils = new JsonUtils();
 		String json = IOUtils.toString( getClass().getResource( "/" + resourcePath ), StandardCharsets.UTF_8 );
 		JSONObject root = new JSONObject( json );
 		for ( Object tempObj : root.getJSONArray( "data" ) ) {
-			ret.add( new Installable( (JSONObject) tempObj, PlatformType.DRUPAL, jsonUtils ) );
+			ret.add( new Installable( (JSONObject) tempObj, PlatformType.DRUPAL, new BasicInstallableVersion( semver ), jsonUtils ) );
 		}
 
 		return ret;
@@ -278,5 +304,11 @@ public class BusinessLogic {
 	protected void handleError( final boolean closeOnExit, final String msg, final Exception e ) throws Exception {
 		logger.error( msg, e );
 		throw e;
+	}
+
+	@Subscribe
+	private void listen( InstallationRequestEvent event ) {
+		List<IInstallable> installables = getInstallables( event.getPlatformType(), event.getProjectType(), event.getIdentifier() );
+		jbus.post( new InstallInstallablesEvent( installables ) );
 	}
 }

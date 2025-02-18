@@ -23,6 +23,8 @@ import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.dizitart.jbus.JBus;
+import org.dizitart.jbus.Subscribe;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -43,6 +45,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -92,23 +95,37 @@ import com.tolstoy.drupal.sheephole.app.installation.SiteProfile;
 public class Start extends Application {
 	private static final Logger logger = LogManager.getLogger( Start.class );
 
+	private static final int SERVER_PORT = 41295;
+
 	private BusinessLogic businessLogic;
+	private BasicServer basicServer;
+	private JBus jbus;
 	private Stage stage;
 	private Scene scene;
 	private MenuBar menuBar;
 	private StatusBar statusBar;
 	private BorderPane mainPane;
+	private TextArea loggingTextArea;
 
 	@Override
-	public void start( Stage stage ) throws InterruptedException {
+	public void start( Stage stage ) throws Exception {
 		this.stage = stage;
 		this.menuBar = createMenuBar();
 
 		this.statusBar = new StatusBar();
 
+		this.loggingTextArea.setEditable( false );
+		this.loggingTextArea.setWrapText( true );
+		this.loggingTextArea.setPrefHeight( 100 );
+
+		BorderPane tempBorderPane = new BorderPane();
+		tempBorderPane.setTop( this.loggingTextArea );
+		tempBorderPane.setBottom( statusBar );
+
 		this.mainPane = new BorderPane();
+		this.mainPane.setPrefHeight( 100 );
 		this.mainPane.setTop( menuBar );
-		this.mainPane.setBottom( statusBar );
+		this.mainPane.setBottom( tempBorderPane );
 
 		this.scene = new Scene( mainPane );
 
@@ -129,6 +146,21 @@ public class Start extends Application {
 				System.exit( 0 );
 			}
 		});
+
+		this.jbus = new JBus();
+		this.jbus.registerWeak( this );
+
+		this.businessLogic = new BusinessLogic( this.jbus );
+
+		try {
+			BasicServer basicServer = new BasicServer( SERVER_PORT, this.jbus );
+			basicServer.start();
+			logger.info( "Server started" );
+		}
+		catch (Exception e) {
+			logger.error( "Cannot start server, that functionality will not be available" );
+			logger.catching( e );
+		}
 	}
 
 	protected void onClickExit() {
@@ -337,6 +369,7 @@ public class Start extends Application {
 		TextField passwordTextField = new PasswordField();
 		grid.add( passwordTextField, 1, row++, colSpan, rowSpan );
 		passwordTextField.setPromptText( "This is not saved to the database." );
+		fillOutPassword( profiles, profileChoiceBox.getSelectionModel().getSelectedItem(), passwordTextField );
 
 		AutoCompletionBinding<IInstallable> binding = TextFields.bindAutoCompletion( moduleAutocomplete, input -> {
 			if ( input.getUserText().length() < 3 ) {
@@ -353,15 +386,7 @@ public class Start extends Application {
 
 		profileChoiceBox.setOnAction( event -> {
 			moduleAutocomplete.clear();
-			MenuOption selected = profileChoiceBox.getSelectionModel().getSelectedItem();
-			for ( ISiteProfile profile : profiles ) {
-				if ( profile.getId() == selected.getId() ) {
-					String password = profile.getPassword();
-					if ( password != null && password.length() > 0 ) {
-						passwordTextField.setText( password );
-					}
-				}
-			}
+			fillOutPassword( profiles, profileChoiceBox.getSelectionModel().getSelectedItem(), passwordTextField );
 		});
 
 		Button btnCancel = new Button( "Cancel" );
@@ -385,11 +410,89 @@ public class Start extends Application {
 		btnCreate.setOnAction( new EventHandler<ActionEvent>() {
 			@Override
 			public void handle( ActionEvent e ) {
-				handleInstallationEvent( moduleAutocompleteLastSelected.value, passwordTextField.getText(), profileChoiceBox.getSelectionModel().getSelectedItem() );
+				handleInstallationEvent( Arrays.asList( moduleAutocompleteLastSelected.value ), passwordTextField.getText(), profileChoiceBox.getSelectionModel().getSelectedItem() );
 			}
 		});
 
 		binding.setOnAutoCompleted( e -> { moduleAutocompleteLastSelected.value = e.getCompletion(); } );
+
+		setContentPane( grid );
+	}
+
+	protected void onClickComposerInstall( List<IInstallable> installables ) {
+		IOperationResult res;
+		int row = 0;
+		int colSpan = 2;
+		int rowSpan = 1;
+
+		IInstallable installable = installables.get( 0 );
+
+		res = businessLogic.getProfiles();
+		if ( res.getType() != OperationResultType.SUCCESS ) {
+			clearContentPane();
+			setStatus( "" + res );
+			return;
+		}
+
+		List<SiteProfile> profiles = (List<SiteProfile>) res.getData();
+		if ( profiles.size() < 1 ) {
+			clearContentPane();
+			setStatus( "You need to create a profile first" );
+			return;
+		}
+
+		GridPane grid = new GridPane();
+		grid.setAlignment( Pos.CENTER );
+		grid.setHgap( 10 );
+		grid.setVgap( 10 );
+		grid.setPadding( new Insets( 25, 25, 25, 25 ) );
+		Text title = new Text( "Install a module" );
+		title.setFont( Font.font( "Tahoma", FontWeight.NORMAL, 20 ) );
+		grid.add( title, 0, row++, 2, 1 );
+
+		ObservableList<MenuOption> profileList = profilesToMenuOptions( profiles );
+
+		final ChoiceBox<MenuOption> profileChoiceBox = new ChoiceBox<>( profileList );
+		profileChoiceBox.getSelectionModel().select( 0 );
+
+		grid.add( new Label( "Profile:" ), 0, row );
+		grid.add( profileChoiceBox, 1, row++, colSpan, rowSpan );
+
+		grid.add( new Label( "Module name:" ), 0, row );
+		Text moduleTitle = new Text( installable.getTitle() );
+		grid.add( moduleTitle, 1, row++, colSpan, rowSpan );
+
+		grid.add( new Label( "Password:" ), 0, row );
+		TextField passwordTextField = new PasswordField();
+		grid.add( passwordTextField, 1, row++, colSpan, rowSpan );
+		passwordTextField.setPromptText( "This is not saved to the database." );
+		fillOutPassword( profiles, profileChoiceBox.getSelectionModel().getSelectedItem(), passwordTextField );
+
+		profileChoiceBox.setOnAction( event -> {
+			fillOutPassword( profiles, profileChoiceBox.getSelectionModel().getSelectedItem(), passwordTextField );
+		});
+
+		Button btnCancel = new Button( "Cancel" );
+		Button btnCreate = new Button( "Install" );
+		HBox hbBtn = new HBox( 10 );
+		hbBtn.setAlignment( Pos.BOTTOM_RIGHT );
+		hbBtn.getChildren().add( btnCancel );
+		hbBtn.getChildren().add( btnCreate );
+		grid.add( hbBtn, 1, 5 );
+
+		btnCancel.setOnAction( new EventHandler<ActionEvent>() {
+			@Override
+			public void handle( ActionEvent e ) {
+				clearContentPane();
+			}
+		});
+
+		btnCreate.setOnAction( new EventHandler<ActionEvent>() {
+			@Override
+			public void handle( ActionEvent e ) {
+				handleInstallationEvent( installables, passwordTextField.getText(), profileChoiceBox.getSelectionModel().getSelectedItem() );
+			}
+		});
 
 		setContentPane( grid );
 	}
@@ -451,10 +554,10 @@ public class Start extends Application {
 		setContentPane( pane );
 	}
 
-	protected void handleInstallationEvent( IInstallable installable, String password, MenuOption selected ) {
+	protected void handleInstallationEvent( List<IInstallable> installables, String password, MenuOption selected ) {
 		IOperationResult res;
 
-		if ( installable == null ) {
+		if ( installables == null || installables.isEmpty() ) {
 			setStatus( "No item selected" );
 			return;
 		}
@@ -476,10 +579,36 @@ public class Start extends Application {
 		}
 
 		SiteProfile profile = (SiteProfile) res.getData();
+		profile.setPassword( password );
 
-		res = businessLogic.installInstallable( installable, profile, password );
+		IInstallable matchingInstallable = null;
+		for ( IInstallable installable : installables ) {
+			if ( installable.getInstallableVersion().isCompatible( profile.getVersion() ) ) {
+				matchingInstallable = installable;
+				break;
+			}
+		}
+
+		if ( matchingInstallable == null ) {
+			setStatus( "No installation candidate found" );
+			return;
+		}
+
+		res = businessLogic.installInstallable( matchingInstallable, profile, password );
 
 		setStatus( "" + res );
+	}
+
+	protected void fillOutPassword( List<SiteProfile> profiles, MenuOption selected, TextField textField ) {
+		for ( ISiteProfile profile : profiles ) {
+			String pwd = profile.getPassword();
+			if ( profile.getId() == selected.getId() ) {
+				String password = profile.getPassword();
+				if ( password != null && password.length() > 0 ) {
+					textField.setText( password );
+				}
+			}
+		}
 	}
 
 	protected MenuBar createMenuBar() {
@@ -625,12 +754,18 @@ public class Start extends Application {
 		return businessLogic.getInstallables( profile.getPlatformType(), profile.getVersion() );
 	}
 
+	@Subscribe
+	private void listen( InstallInstallablesEvent event ) {
+		Platform.runLater( () -> onClickComposerInstall( event.getInstallables() ) );
+	}
 
 	public Start() throws Exception {
-		this.businessLogic = new BusinessLogic();
+		this.loggingTextArea = new TextArea();
+		TextAreaLogAppender.setTextArea( this.loggingTextArea );
 	}
 
 	public static void main( String[] args ) {
+		//System.setProperty( "log4j2.debug", "true" );
 		launch( args );
 	}
 

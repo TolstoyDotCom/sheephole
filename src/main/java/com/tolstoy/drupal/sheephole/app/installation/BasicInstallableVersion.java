@@ -11,20 +11,22 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.tolstoy.drupal.sheephole.api.installation;
+package com.tolstoy.drupal.sheephole.app.installation;
 
 import java.util.List;
 
-public interface IInstallable {
-	String getTitle();
-	String getMachineName();
-	String getDescription();
-	String getPlainDescription( int maxLen );
-	PlatformType getType();
-	IInstallableVersion getInstallableVersion();
-	List<IInstallationInstruction> getInstallationInstructions();
-	boolean isMatchFor( String substring );
-	String getExtraValue( String key );
-	void setExtraData( String key, String value );
-	String getSummary();
+import org.semver4j.Semver;
+
+import com.tolstoy.drupal.sheephole.api.installation.IInstallableVersion;
+
+public class BasicInstallableVersion implements IInstallableVersion {
+	private final Semver semver;
+
+	public BasicInstallableVersion( Semver semver ) {
+		this.semver = semver;
+	}
+
+	public boolean isCompatible( Semver other ) {
+		return other.getMajor() == semver.getMajor();
+	}
 }

@@ -28,7 +28,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<log4j.version>2.17.1</log4j.version>
 		<derby.version>10.16.1.1</derby.version>
-		<jackson.version>[2.9.9.1,)</jackson.version>
+		<jackson.version>2.18.2</jackson.version>
 		<javafx.version>15.0.1</javafx.version>
 	</properties>
 
@@ -40,6 +40,8 @@
 	</repositories>
 
 	<dependencies>
+		<!--https://code.google.com/archive/p/kitty-cache/-->
+
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcprov-jdk18on</artifactId>

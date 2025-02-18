@@ -26,6 +26,8 @@ Note that the SSH password is not saved to the database.
 
 Developers who have maven installed can compile from source using `mvn clean compile exec:java`.
 
-Note: the Sheephole application (the "Software") is provided on an as-is basis. Chris Kelly hereby disclaims all warranties of any kind, express or implied, including, without limitation,
+Note: The Sheephole application (the "Software") is provided on an as-is basis. Chris Kelly hereby disclaims all warranties of any kind, express or implied, including, without limitation,
 the warranties of merchantability, fitness for a particular purpose and non-infringement. Chris Kelly makes no warranty that the Software will be error free.
 You understand that you use the Software at your own discretion and risk.
+
+Note 2: Due to Maven not picking it up from Github, the KittyCache classes have been put in the spaceprogram package inside the source. Those are covered by the Apache License 2.0 (same as the rest of the code). The original location of those classes are at code.google.com/archive/p/kitty-cache.

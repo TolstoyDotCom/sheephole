@@ -46,11 +46,11 @@ public class Installable implements IInstallable {
 	private final String description;
 	private final String link;
 	private final PlatformType type;
-	private final List<IInstallableVersion> versions;
+	private final IInstallableVersion installableVersion;
 	private final List<IInstallationInstruction> installationInstructions;
 	private final Map<String,String> extraData;
 
-	public Installable( JSONObject obj, PlatformType type, IJsonUtils jsonUtils ) throws Exception {
+	public Installable( JSONObject obj, PlatformType type, IInstallableVersion installableVersion, IJsonUtils jsonUtils ) throws Exception {
 		JSONObject attributes = (JSONObject) obj.getJSONObject( "attributes" );
 
 		for ( String key : REQUIRED_JSON_KEYS ) {
@@ -77,7 +77,7 @@ public class Installable implements IInstallable {
 		this.machineName = jsonUtils.getJSONValue( attributes, "field_project_machine_name", String.class );
 		this.description = tempDesc;
 		this.type = type;
-		this.versions = Collections.emptyList();
+		this.installableVersion = installableVersion;
 		this.installationInstructions = new ArrayList<IInstallationInstruction>();
 		this.installationInstructions.add( new InstallationInstruction( InstallationInstructionType.COMPOSER_NAMESPACE, jsonUtils.getJSONValue( attributes, "field_composer_namespace", String.class ) ) );
 
@@ -91,14 +91,14 @@ public class Installable implements IInstallable {
 						String machineName,
 						String description,
 						PlatformType type,
-						List<IInstallableVersion> versions,
+						IInstallableVersion installableVersion,
 						List<IInstallationInstruction> installationInstructions ) {
 		this.title = title;
 		this.link = link;
 		this.machineName = machineName;
 		this.description = description;
 		this.type = type;
-		this.versions = Collections.emptyList();
+		this.installableVersion = null;
 		this.installationInstructions = installationInstructions;
 		this.extraData = new HashMap<String,String>();
 	}
@@ -136,8 +136,8 @@ public class Installable implements IInstallable {
 	}
 
 	@Override
-	public List<IInstallableVersion> getVersions() {
-		return versions;
+	public IInstallableVersion getInstallableVersion() {
+		return installableVersion;
 	}
 
 	@Override
@@ -168,7 +168,7 @@ public class Installable implements IInstallable {
 		.append( "description", getPlainDescription( 40 ) )
 		.append( "link", link )
 		.append( "type", type )
-		.append( "versions", versions )
+		.append( "installableVersion", installableVersion )
 		.append( "installationInstructions", installationInstructions )
 		.append( "extraData", extraData )
 		.toString();

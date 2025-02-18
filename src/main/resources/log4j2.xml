@@ -30,6 +30,8 @@
 			</Policies>
 			<DefaultRolloverStrategy max="500" />
 		</RollingFile>
+
+		<TextAreaLogAppender name="TextAreaLogAppender" />
 	</Appenders>
 
 	<Loggers>
@@ -40,6 +42,7 @@
 		<Root level="info">
 			<AppenderRef ref="RollingFile" />
 			<AppenderRef ref="Console" />
+			<AppenderRef ref="TextAreaLogAppender" />
 		</Root>
 	</Loggers>
 </Configuration>

@@ -13,18 +13,8 @@
  */
 package com.tolstoy.drupal.sheephole.api.installation;
 
-import java.util.List;
-
-public interface IInstallable {
-	String getTitle();
-	String getMachineName();
-	String getDescription();
-	String getPlainDescription( int maxLen );
-	PlatformType getType();
-	IInstallableVersion getInstallableVersion();
-	List<IInstallationInstruction> getInstallationInstructions();
-	boolean isMatchFor( String substring );
-	String getExtraValue( String key );
-	void setExtraData( String key, String value );
-	String getSummary();
+public enum ProjectType {
+	EXTENSION,
+	LIBRARY,
+	THEME;
 }
