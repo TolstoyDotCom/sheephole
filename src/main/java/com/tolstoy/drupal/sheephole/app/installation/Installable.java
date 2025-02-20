@@ -98,7 +98,7 @@ public class Installable implements IInstallable {
 		this.machineName = machineName;
 		this.description = description;
 		this.type = type;
-		this.installableVersion = null;
+		this.installableVersion = installableVersion;
 		this.installationInstructions = installationInstructions;
 		this.extraData = new HashMap<String,String>();
 	}

@@ -75,6 +75,7 @@ import org.controlsfx.control.StatusBar;
 import org.controlsfx.control.textfield.AutoCompletionBinding;
 import atlantafx.base.theme.PrimerLight;
 import org.controlsfx.control.textfield.TextFields;
+import org.semver4j.Semver;
 
 import com.tolstoy.basic.api.storage.IStorage;
 import com.tolstoy.basic.api.utils.IResourceBundleWithFormatting;
@@ -83,13 +84,19 @@ import com.tolstoy.basic.app.utils.Utils;
 import com.tolstoy.basic.app.utils.ResourceBundleWithFormatting;
 import com.tolstoy.drupal.sheephole.app.installation.AppDirectories;
 import com.tolstoy.drupal.sheephole.api.installation.IAppDirectories;
+import com.tolstoy.drupal.sheephole.api.installation.IInstallationInstruction;
 import com.tolstoy.drupal.sheephole.api.preferences.IPreferences;
 import com.tolstoy.drupal.sheephole.api.preferences.IPreferencesFactory;
 import com.tolstoy.drupal.sheephole.app.preferences.PreferencesFactory;
+import com.tolstoy.drupal.sheephole.api.installation.InstallationInstructionType;
 import com.tolstoy.drupal.sheephole.api.installation.IOperationResult;
 import com.tolstoy.drupal.sheephole.api.installation.IInstallable;
 import com.tolstoy.drupal.sheephole.api.installation.OperationResultType;
 import com.tolstoy.drupal.sheephole.api.installation.ISiteProfile;
+import com.tolstoy.drupal.sheephole.api.installation.PlatformType;
+import com.tolstoy.drupal.sheephole.app.installation.BasicInstallableVersion;
+import com.tolstoy.drupal.sheephole.app.installation.Installable;
+import com.tolstoy.drupal.sheephole.app.installation.InstallationInstruction;
 import com.tolstoy.drupal.sheephole.app.installation.SiteProfile;
 
 public class Start extends Application {
@@ -497,6 +504,26 @@ public class Start extends Application {
 		setContentPane( grid );
 	}
 
+	protected void onClickSetup() {
+		List<IInstallable> installables = new ArrayList<IInstallable>( 2 );
+
+		for ( int majorVersion = 10; majorVersion <= 11; majorVersion++ ) {
+			List<IInstallationInstruction> installationInstructions = new ArrayList<IInstallationInstruction>();
+			installationInstructions.add( new InstallationInstruction( InstallationInstructionType.COMPOSER_NAMESPACE, "drupal/sheephole_helper:1.0.x-dev@dev" ) );
+
+			IInstallable installable = new Installable( "Sheephole helper",
+														"https://www.drupal.org/project/sheephole_helper",
+														"sheephole_helper",
+														"This Project Browser add-on lets you install Drupal modules the right way (using composer) without having to learn SSH or the command line. And without creating an unsafe configuration.",
+														PlatformType.DRUPAL,
+														new BasicInstallableVersion( new Semver( majorVersion + ".0.0" ) ),
+														installationInstructions );
+			installables.add( installable );
+		}
+
+		onClickComposerInstall( installables );
+	}
+
 	protected void onClickHelpAbout() {
 		setStatus( "" );
 		FlowPane pane = new FlowPane();
@@ -637,9 +664,13 @@ public class Start extends Application {
 		Menu menuCommands = new Menu( "Commands" );
 		menuBar.getMenus().add( menuCommands );
 
-		MenuItem menuItemComposer = new MenuItem( "Install" );
+		MenuItem menuItemComposer = new MenuItem( "Install module" );
 		menuItemComposer.setOnAction( e -> onClickComposerInstall() );
 		menuCommands.getItems().add( menuItemComposer );
+
+		MenuItem menuItemSetup = new MenuItem( "Setup" );
+		menuItemSetup.setOnAction( e -> onClickSetup() );
+		menuCommands.getItems().add( menuItemSetup );
 
 
 		Menu menuHelp = new Menu( "Help" );

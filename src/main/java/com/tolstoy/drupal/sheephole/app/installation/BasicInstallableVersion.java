@@ -29,4 +29,9 @@ public class BasicInstallableVersion implements IInstallableVersion {
 	public boolean isCompatible( Semver other ) {
 		return other.getMajor() == semver.getMajor();
 	}
+
+	@Override
+	public String toString() {
+		return "" + semver;
+	}
 }

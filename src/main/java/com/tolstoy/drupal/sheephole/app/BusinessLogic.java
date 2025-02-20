@@ -64,8 +64,8 @@ import com.tolstoy.drupal.sheephole.app.installation.SiteProfile;
 
 public class BusinessLogic {
 	private static final Logger logger = LogManager.getLogger( BusinessLogic.class );
-	private static final String CACHED_MODULES_D10 = "drupal_modules_d10_jan25.json";
-	private static final String CACHED_MODULES_D11 = "drupal_modules_d11_jan25.json";
+	private static final String CACHED_MODULES_D10 = "drupal_modules_d10_feb25.json";
+	private static final String CACHED_MODULES_D11 = "drupal_modules_d11_feb25.json";
 
 	private final JBus jbus;
 	private final IStorage storage;
