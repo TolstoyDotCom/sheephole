@@ -787,7 +787,10 @@ public class Start extends Application {
 
 	@Subscribe
 	private void listen( InstallInstallablesEvent event ) {
-		Platform.runLater( () -> onClickComposerInstall( event.getInstallables() ) );
+		Platform.runLater( () -> {
+			stage.toFront();
+			onClickComposerInstall( event.getInstallables() );
+		});
 	}
 
 	public Start() throws Exception {
