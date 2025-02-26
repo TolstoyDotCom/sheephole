@@ -47,6 +47,7 @@ public class SSHManager implements ISSHManager {
 			String drupalPath = null;
 
 			ssh.authPassword( profile.getUserName(), password );
+			ssh.setTimeout( 5 );
 
 			session = ssh.startSession();
 
