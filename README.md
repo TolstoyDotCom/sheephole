@@ -3,6 +3,8 @@
 - a small, boulder-strewn mountain range near Joshua Tree.
 - an application to install Drupal modules the right way (using composer) without having to use the command line.
 
+[![sheephole video](https://img.youtube.com/vi/ylowkvirpzc/0.jpg)](https://www.youtube.com/watch?v=ylowkvirpzc)
+
 To run:
 * Download the latest .zip file from the Releases page.
 * Extract the .zip file to any convenient location.
