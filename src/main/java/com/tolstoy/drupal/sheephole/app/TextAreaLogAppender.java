@@ -26,6 +26,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
 @Plugin(name = "TextAreaLogAppender", category = Core.CATEGORY_NAME, elementType = Appender.ELEMENT_TYPE)
 public class TextAreaLogAppender extends AbstractAppender {
 	private static TextArea textArea;
+	private String lastMessage = null;
 
 	protected TextAreaLogAppender( String name, Filter filter ) {
 		super( name, filter, null );
@@ -42,8 +43,18 @@ public class TextAreaLogAppender extends AbstractAppender {
 
 	@Override
 	public void append( LogEvent event ) {
-		if ( textArea != null ) {
-			Platform.runLater( () -> textArea.appendText( event.getMessage().getFormattedMessage() + "\n" ) );
+		if ( textArea == null || event == null || event.getMessage() == null ) {
+			return;
 		}
+
+		String msg = event.getMessage().getFormattedMessage();
+
+		if ( lastMessage != null && lastMessage.equals( msg ) ) {
+			return;
+		}
+
+		lastMessage = msg;
+
+		Platform.runLater( () -> textArea.appendText( msg + "\n" ) );
 	}
 }
