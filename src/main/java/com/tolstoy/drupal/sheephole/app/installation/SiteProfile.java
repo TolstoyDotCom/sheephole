@@ -21,11 +21,18 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.semver4j.Semver;
+
 import com.tolstoy.drupal.sheephole.api.installation.ISiteProfile;
 import com.tolstoy.drupal.sheephole.api.installation.PlatformType;
 
 public class SiteProfile implements ISiteProfile {
+	private static final Logger logger = LogManager.getLogger( SiteProfile.class );
+
 	private final LongProperty id;
 	private final IntegerProperty uid;
 	private final StringProperty title;
@@ -45,7 +52,7 @@ public class SiteProfile implements ISiteProfile {
 		this.title = new SimpleStringProperty( title );
 		this.userName = new SimpleStringProperty( userName );
 		this.uri = new SimpleStringProperty( uri );
-		this.directory = new SimpleStringProperty( directory );
+		this.directory = new SimpleStringProperty( StringUtils.stripEnd( directory, "/" ) );
 		this.toBeDeleted = new SimpleBooleanProperty();
 
 		long ts = System.currentTimeMillis() / 1000;
@@ -61,7 +68,7 @@ public class SiteProfile implements ISiteProfile {
 		this.title = new SimpleStringProperty( title );
 		this.userName = new SimpleStringProperty( userName );
 		this.uri = new SimpleStringProperty( uri );
-		this.directory = new SimpleStringProperty( directory );
+		this.directory = new SimpleStringProperty( StringUtils.stripEnd( directory, "/" ) );
 		this.toBeDeleted = new SimpleBooleanProperty();
 
 		long ts = System.currentTimeMillis() / 1000;
@@ -76,7 +83,7 @@ public class SiteProfile implements ISiteProfile {
 		this.title = new SimpleStringProperty( title );
 		this.userName = new SimpleStringProperty( userName );
 		this.uri = new SimpleStringProperty( uri );
-		this.directory = new SimpleStringProperty( directory );
+		this.directory = new SimpleStringProperty( StringUtils.stripEnd( directory, "/" ) );
 		this.toBeDeleted = new SimpleBooleanProperty();
 		this.uid = new SimpleIntegerProperty( uid );
 		this.created = new SimpleLongProperty( created );
@@ -90,7 +97,7 @@ public class SiteProfile implements ISiteProfile {
 		this.title = new SimpleStringProperty( title );
 		this.userName = new SimpleStringProperty( userName );
 		this.uri = new SimpleStringProperty( uri );
-		this.directory = new SimpleStringProperty( directory );
+		this.directory = new SimpleStringProperty( StringUtils.stripEnd( directory, "/" ) );
 		this.toBeDeleted = new SimpleBooleanProperty();
 		this.uid = new SimpleIntegerProperty( uid );
 		this.created = new SimpleLongProperty( created );
@@ -262,6 +269,6 @@ public class SiteProfile implements ISiteProfile {
 
 	@Override
 	public String toString() {
-		return "{ id: " + getId() + ", title: " + getTitle() + ", userName: " + getUserName() + ", toBeDeleted: " + getToBeDeleted() + " }";
+		return "{ id: " + getId() + ", title: " + getTitle() + ", userName: " + getUserName() + ", URI: " + getUri() + ", version: " + getVersion() + ", toBeDeleted: " + getToBeDeleted() + " }";
 	}
 }

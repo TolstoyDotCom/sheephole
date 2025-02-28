@@ -13,11 +13,15 @@
  */
 package com.tolstoy.drupal.sheephole.app;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.IOException;
 
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import net.schmizz.sshj.SSHClient;
@@ -51,18 +55,38 @@ public class SSHManager implements ISSHManager {
 
 			session = ssh.startSession();
 
-			if ( !pathExists( ssh, profile.getDirectory() + "/composer.json", true ) ) {
+			if ( !pathExists( ssh, concatPaths( profile.getDirectory(), "composer.json" ), true ) ) {
 				throw new RuntimeException( "composer.json does not exist in " + profile.getDirectory() );
 			}
 
-			String s = "cd " + escape( profile.getDirectory() ) + " && composer require " + escape( composerNamespace ) + " && echo 'flubr'";
+			boolean bSuccess = false;
+			List<String> cmds = getComposerInstallCommands( profile, password, composerNamespace );
 
-			SSHResult res = runCommand( ssh, s );
+			logger.info( "about to try these composer commands:" + cmds );
 
-			logger.info( "ran command=" + s + ", res=" + res );
+			for ( String cmd : cmds ) {
+				try {
+					logger.info( "  about to try: " + cmd );
 
-			if ( !res.getResult().contains( "flubr" ) ) {
-				throw new RuntimeException( "Command failed. Cmd=" + s + ", res=" + res );
+					SSHResult res = runCommand( ssh, cmd );
+
+					if ( res != null && res.getResult() != null && res.getResult().contains( "flubr" ) ) {
+						logger.info( "    successful res from cmd: " + res );
+
+						bSuccess = true;
+
+						break;
+					}
+
+					logger.info( "    unsuccessful res from cmd: " + res );
+				}
+				catch ( Exception e ) {
+					logger.info( "caught exception trying cmd: " + cmd + ", exc=" + e.getMessage() );
+				}
+			}
+
+			if ( !bSuccess ) {
+				throw new RuntimeException( "No composer commands worked: " + cmds );
 			}
 		}
 		finally {
@@ -93,13 +117,13 @@ public class SSHManager implements ISSHManager {
 				throw new RuntimeException( "Root path does not exist: " + directory );
 			}
 
-			if ( !pathExists( ssh, directory + "/composer.json", true ) ) {
+			if ( !pathExists( ssh, concatPaths( directory, "composer.json" ), true ) ) {
 				throw new RuntimeException( "composer.json does not exist in " + directory );
 			}
 
-			drupalPath = directory + "/web/core/lib/Drupal.php";
+			drupalPath = concatPaths( directory, "web/core/lib/Drupal.php" );
 			if ( !pathExists( ssh, drupalPath, true ) ) {
-				drupalPath = directory + "/core/lib/Drupal.php";
+				drupalPath = concatPaths( directory, "core/lib/Drupal.php" );
 				if ( !pathExists( ssh, drupalPath, true ) ) {
 					throw new RuntimeException( "Drupal.php does not exist at " + drupalPath );
 				}
@@ -203,8 +227,26 @@ public class SSHManager implements ISSHManager {
 		}
 	}
 
+	protected List<String> getComposerInstallCommands( ISiteProfile profile, String password, String composerNamespace ) {
+		List<String> ret = new ArrayList<String>( 2 );
+
+		String changeDir = "cd " + escape( profile.getDirectory() );
+		String composerRequire = "composer require " + escape( composerNamespace );
+		String successMarker = "echo 'flubr'";
+		String allowDev = "composer config minimum-stability dev && composer config prefer-stable true";
+
+		ret.add( StringUtils.joinWith( " && ", changeDir, composerRequire, successMarker ) );
+		ret.add( StringUtils.joinWith( " && ", changeDir, allowDev, composerRequire, successMarker ) );
+
+		return ret;
+	}
+
 	protected String escape( String s ) {
 		return "'" + s.replace( "'", "'\\''" ) + "'";
+	}
+
+	protected String concatPaths( String s1, String s2 ) {
+		return FilenameUtils.concat( s1, s2 );
 	}
 
 	private static class SSHResult {

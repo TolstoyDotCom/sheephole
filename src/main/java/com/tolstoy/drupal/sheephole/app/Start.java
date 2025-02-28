@@ -509,7 +509,7 @@ public class Start extends Application {
 
 		for ( int majorVersion = 10; majorVersion <= 11; majorVersion++ ) {
 			List<IInstallationInstruction> installationInstructions = new ArrayList<IInstallationInstruction>();
-			installationInstructions.add( new InstallationInstruction( InstallationInstructionType.COMPOSER_NAMESPACE, "drupal/sheephole_helper:1.0.x-dev@dev" ) );
+			installationInstructions.add( new InstallationInstruction( InstallationInstructionType.COMPOSER_NAMESPACE, "drupal/sheephole_helper" ) );
 
 			IInstallable installable = new Installable( "Sheephole helper",
 														"https://www.drupal.org/project/sheephole_helper",
@@ -607,6 +607,10 @@ public class Start extends Application {
 
 		SiteProfile profile = (SiteProfile) res.getData();
 		profile.setPassword( password );
+
+		for ( IInstallable installable : installables ) {
+			System.out.println( "THEY ARE " + installable.getSummary() + ", it is " + profile );
+		}
 
 		IInstallable matchingInstallable = null;
 		for ( IInstallable installable : installables ) {
