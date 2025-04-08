@@ -101,6 +101,68 @@ public class SSHManager implements ISSHManager {
 	}
 
 	@Override
+	public void composerUpdate( ISiteProfile profile, String password ) throws Exception {
+		SSHClient ssh = null;
+		Session session = null;
+
+		try {
+			ssh = new SSHClient();
+
+			ssh.loadKnownHosts();
+			ssh.connect( profile.getUri() );
+			String drupalPath = null;
+
+			ssh.authPassword( profile.getUserName(), password );
+			ssh.setTimeout( 5 );
+
+			session = ssh.startSession();
+
+			if ( !pathExists( ssh, concatPaths( profile.getDirectory(), "composer.json" ), true ) ) {
+				throw new RuntimeException( "composer.json does not exist in " + profile.getDirectory() );
+			}
+
+			boolean bSuccess = false;
+			List<String> cmds = getComposerUpdateCommands( profile, password );
+
+			logger.info( "about to try these composer commands:" + cmds );
+
+			for ( String cmd : cmds ) {
+				try {
+					logger.info( "  about to try: " + cmd );
+
+					SSHResult res = runCommand( ssh, cmd );
+
+					if ( res != null && res.getResult() != null && res.getResult().contains( "flubr" ) ) {
+						logger.info( "    successful res from cmd: " + res );
+
+						bSuccess = true;
+
+						break;
+					}
+
+					logger.info( "    unsuccessful res from cmd: " + res );
+				}
+				catch ( Exception e ) {
+					logger.info( "caught exception trying cmd: " + cmd + ", exc=" + e.getMessage() );
+				}
+			}
+
+			if ( !bSuccess ) {
+				throw new RuntimeException( "No composer commands worked: " + cmds );
+			}
+		}
+		finally {
+			try {
+				if ( ssh != null ) {
+					ssh.disconnect();
+				}
+			}
+			catch ( Exception e ) {
+			}
+		}
+	}
+
+	@Override
 	public IInstallationInfo getInstallationInfo( String userName, String password, String uri, String directory ) throws Exception {
 		SSHClient ssh = null;
 
@@ -237,6 +299,18 @@ public class SSHManager implements ISSHManager {
 
 		ret.add( StringUtils.joinWith( " && ", changeDir, composerRequire, successMarker ) );
 		ret.add( StringUtils.joinWith( " && ", changeDir, allowDev, composerRequire, successMarker ) );
+
+		return ret;
+	}
+
+	protected List<String> getComposerUpdateCommands( ISiteProfile profile, String password ) {
+		List<String> ret = new ArrayList<String>( 2 );
+
+		String changeDir = "cd " + escape( profile.getDirectory() );
+		String composerUpdate = "composer update";
+		String successMarker = "echo 'flubr'";
+
+		ret.add( StringUtils.joinWith( " && ", changeDir, composerUpdate, successMarker ) );
 
 		return ret;
 	}

@@ -329,6 +329,79 @@ public class Start extends Application {
 		});
 	}
 
+	protected void onClickComposerUpdate() {
+		IOperationResult res;
+		int row = 0;
+		int colSpan = 2;
+		int rowSpan = 1;
+
+		var moduleAutocompleteLastSelected = new Object(){ IInstallable value = null; };
+
+		res = businessLogic.getProfiles();
+		if ( res.getType() != OperationResultType.SUCCESS ) {
+			clearContentPane();
+			setStatus( "" + res );
+			return;
+		}
+
+		List<SiteProfile> profiles = (List<SiteProfile>) res.getData();
+		if ( profiles.size() < 1 ) {
+			clearContentPane();
+			setStatus( "You need to create a profile first" );
+			return;
+		}
+
+		GridPane grid = new GridPane();
+		grid.setAlignment( Pos.CENTER );
+		grid.setHgap( 10 );
+		grid.setVgap( 10 );
+		grid.setPadding( new Insets( 25, 25, 25, 25 ) );
+		Text title = new Text( "Update core and modules" );
+		title.setFont( Font.font( "Tahoma", FontWeight.NORMAL, 20 ) );
+		grid.add( title, 0, row++, 2, 1 );
+
+		ObservableList<MenuOption> profileList = profilesToMenuOptions( profiles );
+
+		final ChoiceBox<MenuOption> profileChoiceBox = new ChoiceBox<>( profileList );
+		profileChoiceBox.getSelectionModel().select( 0 );
+
+		grid.add( new Label( "Profile:" ), 0, row );
+		grid.add( profileChoiceBox, 1, row++, colSpan, rowSpan );
+
+		grid.add( new Label( "Password:" ), 0, row );
+		TextField passwordTextField = new PasswordField();
+		grid.add( passwordTextField, 1, row++, colSpan, rowSpan );
+		passwordTextField.setPromptText( "This is not saved to the database." );
+		fillOutPassword( profiles, profileChoiceBox.getSelectionModel().getSelectedItem(), passwordTextField );
+
+		Button btnCancel = new Button( "Cancel" );
+		Button btnCreate = new Button( "Update" );
+		HBox hbBtn = new HBox( 10 );
+		hbBtn.setAlignment( Pos.BOTTOM_RIGHT );
+		hbBtn.getChildren().add( btnCancel );
+		hbBtn.getChildren().add( btnCreate );
+		grid.add( hbBtn, 1, 5 );
+
+		final Text actiontarget = new Text();
+		grid.add(actiontarget, 1, 6);
+
+		btnCancel.setOnAction( new EventHandler<ActionEvent>() {
+			@Override
+			public void handle( ActionEvent e ) {
+				clearContentPane();
+			}
+		});
+
+		btnCreate.setOnAction( new EventHandler<ActionEvent>() {
+			@Override
+			public void handle( ActionEvent e ) {
+				handleUpdateEvent( passwordTextField.getText(), profileChoiceBox.getSelectionModel().getSelectedItem() );
+			}
+		});
+
+		setContentPane( grid );
+	}
+
 	protected void onClickComposerInstall() {
 		IOperationResult res;
 		int row = 0;
@@ -630,6 +703,33 @@ public class Start extends Application {
 		setStatus( "" + res );
 	}
 
+	protected void handleUpdateEvent( String password, MenuOption selected ) {
+		IOperationResult res;
+
+		if ( password == null || password.length() < 1 ) {
+			setStatus( "No password provided" );
+			return;
+		}
+
+		if ( selected == null ) {
+			setStatus( "No profile selected" );
+			return;
+		}
+
+		res = businessLogic.loadProfileById( selected.getId() );
+		if ( res.getType() != OperationResultType.SUCCESS ) {
+			setStatus( "No such profile found" );
+			return;
+		}
+
+		SiteProfile profile = (SiteProfile) res.getData();
+		profile.setPassword( password );
+
+		res = businessLogic.composerUpdate( profile, password );
+
+		setStatus( "" + res );
+	}
+
 	protected void fillOutPassword( List<SiteProfile> profiles, MenuOption selected, TextField textField ) {
 		for ( ISiteProfile profile : profiles ) {
 			String pwd = profile.getPassword();
@@ -668,9 +768,13 @@ public class Start extends Application {
 		Menu menuCommands = new Menu( "Commands" );
 		menuBar.getMenus().add( menuCommands );
 
-		MenuItem menuItemComposer = new MenuItem( "Install module" );
-		menuItemComposer.setOnAction( e -> onClickComposerInstall() );
-		menuCommands.getItems().add( menuItemComposer );
+		MenuItem menuItemComposerInstall = new MenuItem( "Install module" );
+		menuItemComposerInstall.setOnAction( e -> onClickComposerInstall() );
+		menuCommands.getItems().add( menuItemComposerInstall );
+
+		MenuItem menuItemComposerUpdate = new MenuItem( "Update core and modules" );
+		menuItemComposerUpdate.setOnAction( e -> onClickComposerUpdate() );
+		menuCommands.getItems().add( menuItemComposerUpdate );
 
 		MenuItem menuItemSetup = new MenuItem( "Setup" );
 		menuItemSetup.setOnAction( e -> onClickSetup() );

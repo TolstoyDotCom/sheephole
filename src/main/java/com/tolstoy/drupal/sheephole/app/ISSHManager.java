@@ -18,4 +18,5 @@ import com.tolstoy.drupal.sheephole.api.installation.ISiteProfile;
 public interface ISSHManager {
 	IInstallationInfo getInstallationInfo( String userName, String password, String uri, String directory ) throws Exception;
 	void composerInstall( ISiteProfile profile, String password, String composerNamespace ) throws Exception;
+	void composerUpdate( ISiteProfile profile, String password ) throws Exception;
 }

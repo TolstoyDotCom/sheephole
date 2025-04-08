@@ -288,6 +288,18 @@ public class BusinessLogic {
 		return new OperationResult( OperationResultType.SUCCESS );
 	}
 
+	public IOperationResult composerUpdate( ISiteProfile profile, String password ) {
+		try {
+			sshManager.composerUpdate( profile, password );
+		}
+		catch ( Exception e ) {
+			logger.catching( e );
+			return new OperationResult( OperationResultType.FAILURE, e.getMessage() );
+		}
+
+		return new OperationResult( OperationResultType.SUCCESS );
+	}
+
 	protected List<IInstallable> parseCachedModules( String resourcePath, Semver semver ) throws Exception {
 		List<IInstallable> ret = new ArrayList<IInstallable>( 10000 );
 
